@@ -1,26 +1,67 @@
-<script setup lang="ts">
+<script lang="ts">
+  import { defineComponent } from 'vue'
   import { useHead } from '@vueuse/head'
   import AuctionData from '@/components/AuctionData.vue'
+  import DropDownVue from './components/DropDown.vue'
+  import { realmsApi } from '@/api'
+  import axios from 'axios'
+  import { onMounted, ref } from 'vue'
+  import Realm from '@/types/Realm'
 
-  const whTooltips = {
-    colorLinks: true,
-    iconizeLinks: true,
-    renameLinks: true,
-  }
-  useHead({
-    script: [
-      {
-        src: 'https://wow.zamimg.com/js/tooltips.js',
-      },
-      {
-        textContent: `const whTooltips = {
-          colorLinks: true, 
-          iconizeLinks: true, 
+  export default defineComponent({
+    name: 'App',
+    components: { AuctionData, DropDownVue },
+    setup() {
+      const realms = ref<Realm[]>([])
+
+      onMounted(async () => {
+        const token = await axios.post(
+          'https://oauth.battle.net/token',
+          new URLSearchParams({
+            grant_type: 'client_credentials',
+          }),
+          {
+            auth: {
+              username: import.meta.env.VITE_CLIENT_ID,
+              password: import.meta.env.VITE_CLIENT_SECRET,
+            },
+          }
+        )
+
+        try {
+          const response = await realmsApi.getAllRealms({
+            namespace: 'dynamic-classic-eu',
+            locale: 'en_US',
+            access_token: token.data.access_token,
+          })
+          realms.value = response.data.realms
+        } catch (error) {
+          console.log(error)
+        }
+      })
+
+      const whTooltips = {
+        colorLinks: true,
+        iconizeLinks: true,
+        renameLinks: true,
+      }
+      useHead({
+        script: [
+          {
+            src: 'https://wow.zamimg.com/js/tooltips.js',
+          },
+          {
+            textContent: `const whTooltips = {
+          colorLinks: true,
+          iconizeLinks: true,
           renameLinks: true,
           iconSize: 'large'
         }`,
-      },
-    ],
+          },
+        ],
+      })
+      return { realms }
+    },
   })
 </script>
 
@@ -39,6 +80,7 @@
       >here</a
     >
   </p>
+  <DropDownVue :realms="realms" />
   <AuctionData />
 </template>
 
